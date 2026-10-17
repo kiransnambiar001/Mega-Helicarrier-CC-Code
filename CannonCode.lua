@@ -9,6 +9,8 @@ local MIN_PITCH = -90
 local MAX_PITCH = 15
 local MIN_YAW = 325
 local MAX_YAW = 35
+
+local selected_ammunition = 4
  
 -- get cannon peripherals
 local cannons = {}
@@ -36,9 +38,20 @@ local function applyCannonAngles(targetYaw, targetPitch)
         cannon.setTargetPitch(targetPitch)
     end
 end
- 
+
+local function writeDisplay(display, text, line, color)
+    display.setCursorPos(1, line)
+    display.setTextColor(color)
+    display.clearLine()
+    display.write(text)
+end
+
 turnOnComputerControl()
 applyCannonAngles(0,0)
+writeDisplay(display, "HE-MK5", 4, colors.yellow)
+writeDisplay(display, "reassembled", 1, colors.white)
+writeDisplay(display, "STARTED", 2, colors.yellow)
+
  
 local function normalizeAngle(angle)
     return (angle % 360 + 360) % 360
@@ -69,12 +82,6 @@ local function clampPitch(angle)
     end  
 end
  
-local function writeDisplay(display, text, line, color)
-    display.setCursorPos(1, line)
-    display.setTextColor(color)
-    display.clearLine()
-    display.write(text)
-end
  
 local function placeAndWrench() 
     -- place munition
@@ -110,10 +117,29 @@ local function shootAndPrep()
     linkAdapter.sendLinkSignal("minecraft:lapis_lazuli","minecraft:iron_ingot",15)
     writeDisplay(display, "breach pulled out", 1, colors.white)
 end
+
+local function loadAmmunition()
+    if selected_ammunition == 1 then -- cluster
+        linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:redstone", 15)
+    elseif selected_ammunition == 2 then -- disintegration
+        linkAdapter.sendLinkSignal("minecraft:redstone", "minecraft:bone", 15)
+    elseif selected_ammunition == 3 then -- nuke
+        linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:string", 15)
+    elseif selected_ammunition == 4 then -- HE-MK5
+        linkAdapter.sendLinkSignal("minecraft:string", "minecraft:bone", 15)
+    end
+
+    os.sleep(0.25)
+
+    linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:redstone", 0)
+    linkAdapter.sendLinkSignal("minecraft:redstone", "minecraft:bone", 0)
+    linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:string", 0)
+    linkAdapter.sendLinkSignal("minecraft:string", "minecraft:bone", 0)
+end
  
 local function sequence()
     writeDisplay(display, "LOADING", 2, colors.blue)
-    parallel.waitForAll(shootAndPrep, placeAndWrench)
+    parallel.waitForAll(shootAndPrep, placeAndWrench, loadAmmunition)
  
     -- gantry push in/out
     linkAdapter.sendLinkSignal("minecraft:gold_ingot","minecraft:lapis_lazuli",15)
@@ -138,15 +164,21 @@ end
 local function controlLoop()
     while true do
         if #cannons > 0 then
-            if #cannons > 0 then
-                local upVal = linkAdapter.getLinkSignal("minecraft:redstone", "minecraft:nether_brick")
-                local downVal = linkAdapter.getLinkSignal("minecraft:nether_brick", "minecraft:redstone")
-                local leftVal = linkAdapter.getLinkSignal("minecraft:coal", "minecraft:diamond")
-                local rightVal = linkAdapter.getLinkSignal("minecraft:diamond", "minecraft:coal")
-                
-                local changed = false
-                
-                -- Modify variables based on signals
+
+            local upVal = linkAdapter.getLinkSignal("minecraft:redstone", "minecraft:nether_brick")
+            local downVal = linkAdapter.getLinkSignal("minecraft:nether_brick", "minecraft:redstone")
+            local leftVal = linkAdapter.getLinkSignal("minecraft:coal", "minecraft:diamond")
+            local rightVal = linkAdapter.getLinkSignal("minecraft:diamond", "minecraft:coal")
+            
+            local changed = false
+            
+            -- Modify variables based on signals
+
+            if (linkAdapter.getLinkSignal("minecraft:leather","minecraft:egg") > 0) then -- zero angles
+                targetYaw = 0
+                targetPitch = 0
+                changed = true
+            else
                 if leftVal > 0 then 
                     targetYaw = targetYaw - (leftVal * coefficient)
                     changed = true 
@@ -163,20 +195,41 @@ local function controlLoop()
                     targetPitch = targetPitch - (downVal * coefficient)
                     changed = true 
                 end
-                
-                -- Apply angle limits (Clamping pitch so it stays between MIN and MAX)
-                targetPitch = clampPitch(targetPitch)           
-                targetYaw = clampYaw(targetYaw)
-                
-                writeDisplay(display, targetPitch, 3, colors.white)
-                
-                -- If buttons were pressed, update the cannons using our function
-                if changed then
-                    applyCannonAngles(targetYaw, targetPitch)
-                end
             end
-            os.sleep(0.05)
+            -- Apply angle limits (Clamping pitch so it stays between MIN and MAX)
+            targetPitch = clampPitch(targetPitch)           
+            targetYaw = clampYaw(targetYaw)
+            
+            writeDisplay(display, "P: " .. targetPitch .. ", Y: " .. targetYaw, 3, colors.white)
+            
+            -- If buttons were pressed, update the cannons using our function
+            if changed then
+                applyCannonAngles(targetYaw, targetPitch)
+            end
+
+            --------------------------------------------------------------------------------------
+
+            local clusterBtn = linkAdapter.getLinkSignal("minecraft:flint", "minecraft:wheat")
+            local disintigrationBtn = linkAdapter.getLinkSignal("minecraft:wheat", "minecraft:flint")
+            local nukeBtn = linkAdapter.getLinkSignal("minecraft:feather", "minecraft:flint")
+            local heBtn = linkAdapter.getLinkSignal("minecraft:flint", "minecraft:feather")
+
+            if clusterBtn > 0 then
+                selected_ammunition = 1
+                writeDisplay(display, "Next: CLUSTER", 4, colors.yellow)
+            elseif disintigrationBtn > 0 then
+                selected_ammunition = 2
+                writeDisplay(display, "Next: DISINTEGRATION", 4, colors.yellow)
+            elseif nukeBtn > 0 then
+                selected_ammunition = 3
+                writeDisplay(display, "Next: NUKE", 4, colors.yellow)
+            elseif heBtn > 0 then
+                selected_ammunition = 4
+                writeDisplay(display, "Next: HE-MK5", 4, colors.yellow)
+            end
+
         end
+        os.sleep(0.05)
     end
 end
  
