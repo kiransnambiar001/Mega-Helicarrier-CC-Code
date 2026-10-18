@@ -46,13 +46,14 @@ local function writeDisplay(display, text, line, color)
     display.write(text)
 end
 
+linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 15)
+
 turnOnComputerControl()
 applyCannonAngles(0,0)
 writeDisplay(display, "HE-MK5", 4, colors.yellow)
 writeDisplay(display, "reassembled", 1, colors.white)
 writeDisplay(display, "STARTED", 2, colors.yellow)
 
-linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 15)
 
  
 local function normalizeAngle(angle)
