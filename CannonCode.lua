@@ -52,6 +52,8 @@ writeDisplay(display, "HE-MK5", 4, colors.yellow)
 writeDisplay(display, "reassembled", 1, colors.white)
 writeDisplay(display, "STARTED", 2, colors.yellow)
 
+linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 15)
+
  
 local function normalizeAngle(angle)
     return (angle % 360 + 360) % 360
@@ -241,7 +243,7 @@ local function loadingLoop()
             sequence()
         end
         
-        if linkAdapter.getLinkSignal("","minecraft:iron_ingot") > 0 then
+        if linkAdapter.getLinkSignal("minecraft:snowball","minecraft:slime_ball") > 0 then
             writeDisplay(display, "program ending", 1, colors.white)
             break
         end
@@ -250,3 +252,5 @@ local function loadingLoop()
 end
  
 parallel.waitForAny(controlLoop, loadingLoop)
+linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 0)
+os.shutdown()
