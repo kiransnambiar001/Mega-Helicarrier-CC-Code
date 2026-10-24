@@ -245,7 +245,7 @@ local function loadingLoop()
         end
         
         if linkAdapter.getLinkSignal("minecraft:snowball","minecraft:slime_ball") > 0 then
-            writeDisplay(display, "program ending", 1, colors.white)
+            display.clear()
             break
         end
         os.sleep(0.1)
