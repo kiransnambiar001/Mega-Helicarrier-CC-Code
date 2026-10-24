@@ -9,8 +9,24 @@ local MIN_PITCH = -90
 local MAX_PITCH = 15
 local MIN_YAW = 325
 local MAX_YAW = 35
-
+ 
 local selected_ammunition = 4
+
+TELEMETRY_NAME = "telem2"
+SEGMENT = 2
+ 
+local modem = nil
+for _, device in ipairs(peripheral.getNames()) do
+    if peripheral.getType(device) == "modem" then
+        modem = device
+        break
+    end
+end
+ 
+if not modem then
+    error("No modem found")
+end
+rednet.open(modem)
  
 -- get cannon peripherals
 local cannons = {}
@@ -25,7 +41,7 @@ for _, name in ipairs(peripheral.getNames()) do
 end
 print("Connected to " .. #cannons .. " cannons.")
  
-
+ 
 local function turnOnComputerControl() 
     for _, cannon in ipairs(cannons) do
             cannon.setComputerControl(true)
@@ -38,23 +54,28 @@ local function applyCannonAngles(targetYaw, targetPitch)
         cannon.setTargetPitch(targetPitch)
     end
 end
-
-local function writeDisplay(display, text, line, color)
-    display.setCursorPos(1, line)
-    display.setTextColor(color)
-    display.clearLine()
-    display.write(text)
+ 
+local function writeDisplay(line, segment, stringTable)
+    local data = {
+        line = line,
+        segment = segment,
+        stringTab = stringTable
+    }
+ 
+    rednet.broadcast(data, TELEMETRY_NAME)
+ 
+    return data
 end
-
+ 
 linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 15)
-
+linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald",15)
+ 
 turnOnComputerControl()
 applyCannonAngles(0,0)
-writeDisplay(display, "HE-MK5", 4, colors.yellow)
-writeDisplay(display, "reassembled", 1, colors.white)
-writeDisplay(display, "STARTED", 2, colors.yellow)
-
-
+writeDisplay(4,SEGMENT,{{text = "HE-MK5", color = colors.yellow}})
+writeDisplay(1,SEGMENT,{{text = "reassembled", color = colors.white}})
+writeDisplay(2,SEGMENT,{{text = "STARTED", color = colors.yellow}})
+ 
  
 local function normalizeAngle(angle)
     return (angle % 360 + 360) % 360
@@ -92,13 +113,13 @@ local function placeAndWrench()
     os.sleep(0.5)
     linkAdapter.sendLinkSignal("minecraft:gold_ingot","minecraft:diamond",0)
     os.sleep(0.1)
-    writeDisplay(display, "munition placed", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "munition placed", color = colors.white}})
     -- wrench munition
     linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:gold_ingot",15)
     os.sleep(0.5)
     linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:gold_ingot",0)
     os.sleep(0.1)
-    writeDisplay(display, "munition wrenched", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "munition wrenched", color = colors.white}})
 end
  
 local function shootAndPrep()
@@ -107,20 +128,20 @@ local function shootAndPrep()
     os.sleep(0.1)
     linkAdapter.sendLinkSignal("minecraft:emerald","minecraft:diamond",0)
     os.sleep(0.1)
-    writeDisplay(display, "shot", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "shot", color = colors.white}})
     -- dissasemble
     linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald", 0)
     os.sleep(0.1)
-    writeDisplay(display, "dissasembleed", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "dissasembleed", color = colors.white}})
     -- unscrew breach
     linkAdapter.sendLinkSignal("minecraft:iron_ingot","minecraft:lapis_lazuli", 15)
     os.sleep(1)
-    writeDisplay(display, "unscrewed", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "unscrewed", color = colors.white}})
     -- pull screw breach out
     linkAdapter.sendLinkSignal("minecraft:lapis_lazuli","minecraft:iron_ingot",15)
-    writeDisplay(display, "breach pulled out", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "breach pulled out", color = colors.white}})
 end
-
+ 
 local function loadAmmunition()
     if selected_ammunition == 1 then -- cluster
         linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:redstone", 15)
@@ -131,9 +152,9 @@ local function loadAmmunition()
     elseif selected_ammunition == 4 then -- HE-MK5
         linkAdapter.sendLinkSignal("minecraft:string", "minecraft:bone", 15)
     end
-
+ 
     os.sleep(0.25)
-
+ 
     linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:redstone", 0)
     linkAdapter.sendLinkSignal("minecraft:redstone", "minecraft:bone", 0)
     linkAdapter.sendLinkSignal("minecraft:bone", "minecraft:string", 0)
@@ -141,7 +162,7 @@ local function loadAmmunition()
 end
  
 local function sequence()
-    writeDisplay(display, "LOADING", 2, colors.blue)
+    writeDisplay(1,SEGMENT,{{text = "LOADING", color = colors.blue}})
     parallel.waitForAll(shootAndPrep, placeAndWrench, loadAmmunition)
  
     -- gantry push in/out
@@ -149,25 +170,25 @@ local function sequence()
     os.sleep(2)
     linkAdapter.sendLinkSignal("minecraft:gold_ingot","minecraft:lapis_lazuli",0)
     os.sleep(0.1)
-    writeDisplay(display, "gantry pushed ammo", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "gantry pushed ammo", color = colors.white}})
     -- push screw breach in + screw breach
     linkAdapter.sendLinkSignal("minecraft:lapis_lazuli","minecraft:iron_ingot",0) -- screw 
     linkAdapter.sendLinkSignal("minecraft:iron_ingot","minecraft:lapis_lazuli",0) -- push
     os.sleep(0.7)
-    writeDisplay(display, "pushed and screwed breach in", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "pushed and screwed breach in", color = colors.white}})
     -- reassemble cannon
     linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald",15)
     os.sleep(0.1)
-    writeDisplay(display, "reassembled", 1, colors.white)
+    writeDisplay(1,SEGMENT,{{text = "reassembled", color = colors.white}})
     turnOnComputerControl()
     applyCannonAngles(targetYaw, targetPitch)
-    writeDisplay(display, "READY", 2, colors.red)
+    writeDisplay(1,SEGMENT,{{text = "READY", color = colors.red}})
 end
  
 local function controlLoop()
     while true do
         if #cannons > 0 then
-
+ 
             local upVal = linkAdapter.getLinkSignal("minecraft:redstone", "minecraft:nether_brick")
             local downVal = linkAdapter.getLinkSignal("minecraft:nether_brick", "minecraft:redstone")
             local leftVal = linkAdapter.getLinkSignal("minecraft:coal", "minecraft:diamond")
@@ -176,7 +197,7 @@ local function controlLoop()
             local changed = false
             
             -- Modify variables based on signals
-
+ 
             if (linkAdapter.getLinkSignal("minecraft:leather","minecraft:egg") > 0) then -- zero angles
                 targetYaw = 0
                 targetPitch = 0
@@ -203,20 +224,20 @@ local function controlLoop()
             targetPitch = clampPitch(targetPitch)           
             targetYaw = clampYaw(targetYaw)
             
-            writeDisplay(display, "P: " .. targetPitch .. ", Y: " .. targetYaw, 3, colors.white)
+            writeDisplay(3,SEGMENT,{{text = "P: ", color = colors.white}, {text = targetPitch, color = colors.blue}, {text = ", Y: ", color = colors.white}, {text = targetYaw, color = colors.blue}})
             
             -- If buttons were pressed, update the cannons using our function
             if changed then
                 applyCannonAngles(targetYaw, targetPitch)
             end
-
+ 
             --------------------------------------------------------------------------------------
-
+ 
             local clusterBtn = linkAdapter.getLinkSignal("minecraft:flint", "minecraft:wheat")
             local disintigrationBtn = linkAdapter.getLinkSignal("minecraft:wheat", "minecraft:flint")
             local nukeBtn = linkAdapter.getLinkSignal("minecraft:feather", "minecraft:flint")
             local heBtn = linkAdapter.getLinkSignal("minecraft:flint", "minecraft:feather")
-
+ 
             if clusterBtn > 0 then
                 selected_ammunition = 1
                 writeDisplay(display, "Next: CLUSTER", 4, colors.yellow)
@@ -230,7 +251,7 @@ local function controlLoop()
                 selected_ammunition = 4
                 writeDisplay(display, "Next: HE-MK5", 4, colors.yellow)
             end
-
+ 
         end
         os.sleep(0.05)
     end
