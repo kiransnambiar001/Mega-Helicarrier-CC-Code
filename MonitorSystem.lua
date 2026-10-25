@@ -31,12 +31,11 @@ local function writeMonitor(line, segment, stringTab)
  
     local length = SEGMENT_LENGTH[segment].width
     local start = SEGMENT_LENGTH[segment].start
-    print(textutils.serialise(stringTab))
  
     monitor.setTextColor(colors.white)
  
     monitor.setCursorPos(start, line)
-    monitor.write(string.rep(" ", length))
+    monitor.write(string.rep(" ", length+1))
  
     for index, target in ipairs(stringTab) do
         monitor.setTextColor(target.color)
@@ -50,10 +49,15 @@ local function writeMonitor(line, segment, stringTab)
             totalLength = totalLength + #stringTab[i].text
         end
         
-        local remainingSpace = length - totalLength
- 
+        local remainingSpace = length - totalLength - 1
+        print("totalStart: " .. totalStart .. ", totalLength: " .. totalLength .. ", remainingSpace: " .. remainingSpace)
         monitor.setCursorPos(totalStart, line)
-        monitor.write(target.text)
+        -- monitor.write(target.text)
+        if remainingSpace > 0 then
+            monitor.write(target.text)
+        else
+            monitor.write(target.text:sub(1, length-totalLength))
+        end
     end
 end
  
@@ -61,7 +65,6 @@ local function dataListener()
     while true do
         local senderId, data = rednet.receive(DATA_SOURCE)
         if type(data) == "table" and data.stringTab and data.segment and data.line then
-            print(textutils.serialize(data))
             writeMonitor(
                 data.line,
                 data.segment,

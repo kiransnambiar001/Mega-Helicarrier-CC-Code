@@ -13,7 +13,7 @@ local MAX_YAW = 35
 local selected_ammunition = 4
 
 TELEMETRY_NAME = "telem2"
-SEGMENT = 2
+SEGMENT = 3
  
 local modem = nil
 for _, device in ipairs(peripheral.getNames()) do
@@ -68,11 +68,11 @@ local function writeDisplay(line, segment, stringTable)
 end
  
 linkAdapter.sendLinkSignal("minecraft:tnt","minecraft:oak_fence", 15)
-linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald",15)
+linkAdapter.sendLinkSignal("minecraft:copper_ingot","minecraft:emerald",15)
  
 turnOnComputerControl()
 applyCannonAngles(0,0)
-writeDisplay(4,SEGMENT,{{text = "HE-MK5", color = colors.yellow}})
+writeDisplay(5,SEGMENT,{{text = "HE-MK5", color = colors.yellow}})
 writeDisplay(1,SEGMENT,{{text = "reassembled", color = colors.white}})
 writeDisplay(2,SEGMENT,{{text = "STARTED", color = colors.yellow}})
  
@@ -130,7 +130,7 @@ local function shootAndPrep()
     os.sleep(0.1)
     writeDisplay(1,SEGMENT,{{text = "shot", color = colors.white}})
     -- dissasemble
-    linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald", 0)
+    linkAdapter.sendLinkSignal("minecraft:copper_ingot","minecraft:emerald", 0)
     os.sleep(0.1)
     writeDisplay(1,SEGMENT,{{text = "dissasembleed", color = colors.white}})
     -- unscrew breach
@@ -177,7 +177,7 @@ local function sequence()
     os.sleep(0.7)
     writeDisplay(1,SEGMENT,{{text = "pushed and screwed breach in", color = colors.white}})
     -- reassemble cannon
-    linkAdapter.sendLinkSignal("minecraft:diamond","minecraft:emerald",15)
+    linkAdapter.sendLinkSignal("minecraft:copper_ingot","minecraft:emerald",15)
     os.sleep(0.1)
     writeDisplay(1,SEGMENT,{{text = "reassembled", color = colors.white}})
     turnOnComputerControl()
@@ -224,7 +224,8 @@ local function controlLoop()
             targetPitch = clampPitch(targetPitch)           
             targetYaw = clampYaw(targetYaw)
             
-            writeDisplay(3,SEGMENT,{{text = "P: ", color = colors.white}, {text = targetPitch, color = colors.blue}, {text = ", Y: ", color = colors.white}, {text = targetYaw, color = colors.blue}})
+            writeDisplay(3,SEGMENT,{{text = "P: ", color = colors.white}, {text = tostring(targetPitch), color = colors.blue}})
+            writeDisplay(4,SEGMENT,{{text = "Y: ", color = colors.white}, {text = tostring(targetYaw), color = colors.blue}})
             
             -- If buttons were pressed, update the cannons using our function
             if changed then
@@ -240,16 +241,16 @@ local function controlLoop()
  
             if clusterBtn > 0 then
                 selected_ammunition = 1
-                writeDisplay(display, "Next: CLUSTER", 4, colors.yellow)
+                writeDisplay(5,SEGMENT,{{text = "Next: ", color = colors.white}, {text = "CLUSTER", color = colors.red}})
             elseif disintigrationBtn > 0 then
                 selected_ammunition = 2
-                writeDisplay(display, "Next: DISINTEGRATION", 4, colors.yellow)
+                writeDisplay(5,SEGMENT,{{text = "Next: ", color = colors.white}, {text = "DISINTEGRATION", color = colors.purple}})
             elseif nukeBtn > 0 then
                 selected_ammunition = 3
-                writeDisplay(display, "Next: NUKE", 4, colors.yellow)
+                writeDisplay(5,SEGMENT,{{text = "Next: ", color = colors.white}, {text = "NUKE", color = colors.yellow}})
             elseif heBtn > 0 then
                 selected_ammunition = 4
-                writeDisplay(display, "Next: HE-MK5", 4, colors.yellow)
+                writeDisplay(5,SEGMENT,{{text = "Next: ", color = colors.white}, {text = "HE-MK5", color = colors.yellow}})
             end
  
         end
@@ -261,12 +262,11 @@ end
 local function loadingLoop()
     while true do
         if linkAdapter.getLinkSignal("minecraft:iron_ingot","") > 0 then
-            writeDisplay(display, "starting sequence", 1, colors.white)
+            writeDisplay(1,SEGMENT,{{text = "starting sequence", color = colors.white}})
             sequence()
         end
         
         if linkAdapter.getLinkSignal("minecraft:snowball","minecraft:slime_ball") > 0 then
-            display.clear()
             break
         end
         os.sleep(0.1)
